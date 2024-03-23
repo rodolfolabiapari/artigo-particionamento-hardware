@@ -1,0 +1,183 @@
+%!TEX root = ../main.tex
+% !TeX encoding = UTF-8
+%\chapter{O Particionamento de \HS\ para Sistemas \Wearables} \label{chap:desenvolvimento}
+   \section{O Particionamento de Hardware e Software para Sistemas Wearables} \label{sec:desenvolvimento}
+
+      %De início, será considerado como aplicaçãåo \wearable\ um conjunto de instruções organizadas, e como visto na Seção \ref{sec:gc}, esta também representada por uma coleção de grafos de controle de fluxo, ou seja, GC, especificando a sua ordem de execução.
+      A partir deste, será feito análises a fim da procura de um particionamento que atenda aos requisitos de dispositivos \wearables\ como poder de processamento sem o \textit{trade-off} de energia, além de miniaturização, confiabilidade e outros.
+
+      %Após esclarecidos algumas definições prévias (Seção~\ref{sec:definicoes_previas}), será apresentado o problema na Seção~\ref{sec:declaracao_problema}.
+      %Alguns fatores podem ajudar nas decisões de particionamento tal como expectativa de ganho de performance (Seção \ref{sec:ganho_performance}) e os recursos utilizados em \hardware\ (Seção \ref{sec:recursos}).%, a forma na qual são usados e, talvez os mais importantes, quanto de sobrecarga de comunicação a decomposição impõe (Seção \ref{sec:comunicacao}) \todo{deixar?}e dificuldade de implementar um conjunto específico em \hardware\ (Seção \ref{sec:dificuldades}).\todo{organizar}
+
+
+   \subsection{Declaração do Problema} \label{sec:declaracao_problema}
+      %Nesta seção serão apresentadas as declarações matemáticas do problema de agrupamento de instruções em recursos e seus mapeamentos em \hardware\ ou \software, ou seja, o particionamento \hs.
+      %Segundo \cite{Sass2010}, a forma mais comum de transcrever é descrever manualmente o \core\ com um HDL utilizando \design\ referencial de \software\ como especificação, método utilizado para descrever o problema.
+
+      No particionamento, muitos problemas práticos impactam diretamente na performance do sistema.
+      Nem todos os problemas podem ser incorporados num modelo analítico \cite{Wang2016}, e por isso, só podemos esperar que as soluções matemáticas produzam uma resposta aproximada ao problema de particionamento ao utilizar a declaração formal, pois muitas das entradas do modelo são estimadas ou aproximações no qual futuramente degrada a fidelidade de resultados.
+      %%Este é um fato relevante pois com isso, resolvendo o problema de particionamento `no papel', tem-se um particionamento que é próximo ao ótimo.
+      %%Assim, cabe ao \designer\ ser habilidoso em usar os guias e projetar uma solução mais refinada.
+      Dessa forma, é mais eficiente usar uma combinação de técnicas \textit{ad hoc} e matemáticas para encontrar uma solução ótima ou aproximada como será feito, do que simplesmente confiar numa intuição.
+
+
+      %\begin{comment}
+      %\subsection{Declaração do Problema}
+      %Já descrito as ferramentas matemáticas necessárias para descrever o problema fundamental do particionamento no Capítulo \ref{chap:revisao_bibliografica}, pode-se então descrever formalmente o problema em termos de variáveis. % e descrever um algoritmo \todo{algorit?}para encontrar uma solução aproximada.
+      %
+      %A ideia básica consiste em encontrar um particionamento para todos os blocos básicos de uma aplicação e então separá-los em \hs.
+      Formalmente, procura-se por uma partição $ \mathcal{P} $ de todos os blocos $ U $ de uma aplicação.
+      %
+      %$$ U = \bigcup_{C \in \mathcal{C}} B(C) $$
+      %
+      %$ C = (B,F) $
+      Definida a partição e o universo, tem-se então um subconjunto $ \mathbb{C}\ |\ \mathbb{C} \subseteq U $, onde $ C \in \mathcal{C} $ é um vértice de um $ \mathcal{A} = (\mathcal{C}, \mathcal{L}) $.
+      O conjunto $ \mathbb{C} $, chamado conjunto de candidatos, contém todos os recursos arquiteturais potenciais, ou seja, o subconjunto de $ U $ que é esperado para melhorar a performance do sistema se implementado em um \hardware\ reconfigurável.
+      Devido ao limite de recursos, deve-se refinar para o subconjunto $ \mathbb{D} \subseteq \mathbb{C} $ que maximiza nosso métrica de performance.
+      Assim, tem-se
+      \begin{equation}
+         \begin{array}{rrcl}
+         \textnormal{max}                 & \Gamma ( \mathbb{D})               & ~   & ~                \\
+         subject\ to & \sum_{i \in \mathbb{D}} \vec{r}(i) & < & \vec{r}_{FPGA}
+         \end{array}
+         \label{eq:constraints}
+      \end{equation}
+      %
+      %Descrevendo isso algoritmicamente, uma abordagem seria encontrar todas as partições de $ U $, sintetizando e \textit{profiling} cada partição, e então, quantitativamente avaliar cada $ \Gamma $.
+      %Entretanto, este é um problema linear inteiro devido à natureza de alocação e utilização dos recurso físicos do FPGA. %(Seção \ref{sec:pli})
+
+      A seguir, será descrito como é feito uma abordagem para tal, seguindo estudos de \cite{Arato2003, Wang2016}.
+
+
+   %\subsection{Metodologia Proposta}
+   \subsection{Proposta do Procedimento Analítico} \label{sec:proposta}
+
+      Neste, apresenta-se o algoritmo e sua descrição classificadas por cada fim a ser alcançado.
+      %Neste, será formulada uma proposta de metodologia analítica baseada nos conceitos propostos pela literatura, com o foco em componentes procedurais integrados à sistemas \wearables.
+      %E com isso, o trabalho consiste em desenvolver seus respectivos grafos e realizar o particionamento a fim de encontrar uma solução aproximada, respeitando os seus requisitos de funcionamento.
+      %
+      %Tal metodologia, apresentada pelo Algoritmo~\ref{alg:proposta}, será considerada apenas como uma orientação para os passos a serem realizados, sendo então, uma proposta representativa do processo a ser realizado para a análise e decisão de particionamento.
+
+      \begin{algorithm}[!ht] \footnotesize
+         \SetKwData{itt}{it}
+         \SetKwData{pl}{partition\_list}
+         \SetKwData{complexSet}{how\_complex\_set\_is}
+         \SetKwData{md}{matriz\_dados}
+         \SetKwData{complexSet}{how\_complex\_set\_is}
+         \SetKwFunction{graph}{make\_graph}
+         \SetKwFunction{porte}{analyse\_complex\_set}
+         \SetKwFunction{synth}{synthesize}
+         \SetKwFunction{resources}{resources\_used}
+         \SetKwFunction{die}{die\_used}
+         \SetKwFunction{energy}{energy\_spent}
+         \SetKwFunction{profiling}{profile}
+         \SetKwFunction{performance}{performance\_analysis}
+         \SetKwFunction{factor}{complexity\_factor}
+         \SetKwFunction{ilp}{integer\_linear\_solve}
+         \SetKwFunction{heuristic}{heuristic}
+         \KwIn{a project description.}
+         \KwOut{a partition solved.}
+
+         %\BlankLine
+         \Begin{
+
+            \BlankLine
+            \func{profiling}();
+            \BlankLine
+
+            %\tcp{extration project analyses}
+            %\graph{Flow Control Graph}\;
+            %\graph{Call Graph}\;
+            %\complexSet $\leftarrow$ \porte{}\tcp*{verify if it is a big project}
+
+            \BlankLine
+
+            \If{exist partitions that can be synthesized}{
+               \ForEach{partition project:\vars{it} $\in$ \vars{partition\_list}}{
+                  \func{synth}(\vars{it});
+                  \BlankLine
+                  \func{resources}(\vars{it})\tcp*{analysis after synth}
+                  \func{die}(\vars{it})\;
+                  \func{energy}(\vars{it});
+                  %\BlankLine
+
+
+                  \func{performance}(\vars{it});
+               }
+               \BlankLine
+
+               %\uIf(\tcp*[f]{verify if it is a small project}){\factor{\complexSet}}{
+                  \func{ilp}(\vars{partition\_list})\tcp*{analyse quantitatively each $ \Gamma $}
+               %}
+               %\lElse{
+                  %\heuristic{\vars{partition\_list})\;
+               %}
+            }
+         }
+         \caption{Metodologia de avaliação de \wearables.}
+         \label{alg:proposta}
+      \end{algorithm}
+        \todo[inline]{atualizar}
+        \todo[inline]{melhorar}
+      %Apresentado o procedimento metodológico, a seguir será listada cada função pertencente à metodologia acima, descrevendo suas funções e seu propósito no trabalho para a obtenção dos objetivos.
+      %Para um melhor compreendimento, serão divididos em quatro seções, sendo elas: visualização do projeto, síntese, análise de síntese, particionamento.
+
+      \begin{enumerate}
+         \item Procedimentos para visualização geral do projeto.
+         %Por meio dos dados do \profile\ e a construção dos grafos, é possível ter uma visão geral, verificando se o sistema possui possíveis seções de processamentos críticos para a realização de particionamento \hs.
+
+         \begin{itemize}
+            \item \texttt{profile():}
+               procedimento referente à Seção~\ref{sec:profile}.
+               %Realiza-se uma análise de tempo gasto em cada procedimento do projeto, apresentando-a ao final de sua execução.
+               %Com os resultados, é possível ver locais onde existe um tempo maior de processamento gasto ou de recursos utilizados indicando uma verificação detalhada sobre este a fim de candidatá-lo para uma implementação em \hardware;
+
+               \begin{comment}
+            \item \texttt{make\_graph(}\textit{type}\texttt{):}
+               constroi-se grafos relativos ao projeto, sendo estes de acordo com o tipo especificado no parâmetro.
+               %A construção do grafo segue como descrito na Seção~\ref{sec:GCF} na qual procura-se por seções de códigos compondo-os em blocos, compreendendo o fluxo do algoritmo e consecutivamente os procedimentos de chamadas.
+               O parâmetro simboliza a especificação de qual tipo de grafo será construído, sendo ele um GCF (Seção~\ref{sec:GCF}) ou GC (Seção~\ref{sec:gc}), que como já explicado, necessita do anterior para sua construção;
+            \end{comment}
+         \end{itemize}
+
+         \item Procedimento de síntese.
+         \begin{itemize}
+            \item \texttt{synthesize():}
+               caso exista uma possibilidade de particionamento,
+               %análise obtida pelo \profile, visualização do grafo e obtenção de uma lista de candidatos,
+               realiza-se então o procedimento de geração de HDL para o desenvolvimento de aceleradores em \textit{hardware} reconfigurável.% e sua análise de performance e gastos tanto de energia quanto de recursos;
+         \end{itemize}
+
+         \item Após a execução do processo de síntese, é possível obter vários dados analíticos de alocação de recursos. % como quantidade de elementos lógicos utilizados, pinos virtuais e físicos, quantidade de bits de memória, além de vários outros.
+         %E com a sua sintetização na plataforma, também é possível obter a avaliação de consumo energético, \profile\ e performance.
+         Estes são representados pelos métodos abaixo na qual, aplica-se a cada componente sintetizado separadamente.
+         \begin{itemize}
+            \item \texttt{resources\_used():}
+               quais e a quantidade de recursos alocados para utilização no projeto de geração de aceleradores;
+               %A alocação de muitos recursos implica num gasto maior de energia criando um \textit{trade-off} a ser analisado;
+
+            \item \texttt{die\_used():}
+               tamanho do \textit{die} utilizado para o projeto do acelerador.
+               %Sistemas \wearables\ possuem como requisito a sua miniaturização, impedindo que seu uso limite a capacidade de locomoção, usabilidade ou conforto do usuário, por exemplo;
+
+            \item \texttt{energy\_spent():}
+               estimação de valores energéticos do uso do recurso implementado.%, incluindo os módulos pertencentes a ele como memórias, DSPs e quaisquer outros que estejam integrados à plataforma;
+
+            \item \texttt{performance\_analysis():}
+               comparação das implementações em \hardware\ sobre os recursos em nível de \textit{software}, ou seja, análise de performance.
+         \end{itemize}
+
+         \item Procedimento de escolha de particionamento.
+         \begin{itemize}
+            \item \texttt{integer\_linear\_solver():}
+               após realizado todas as análises individuais acima, inicia-se o processo de procura de uma solução de particionamento que obtenha bons resultados nos requisitos de um sistema \wearable.
+               %Dessa forma, é realizado uma avaliação por meio de um \textit{solver} linear inteiro segundo os dados obtidos.
+               %Com o \textit{solver}, é possível realizar uma busca a procura de um particionamento que atenda a quantidade máxima de restrições exigidas por um \wearable.
+         \end{itemize}
+      \end{enumerate}
+
+
+      %Conclusão
+      Assim, o trabalho consiste numa metodologia na qual aborda o particionamento para dispositivos \wearables, partindo de uma análise de execução do \software, candidatando alguns procedimentos para sua sintetização e assim a avaliação destes segundo os recursos utilizados para a completude de suas tarefas o que chamamos de particionamento, consistindo da procura de um conjunto que traga melhor desempenho no seu uso.
+      Tudo isso, utilizando recursos disponibilizados pela plataforma em \hardware.
+      %O Algoritmo~\ref{alg:proposta} tem como o objetivo a demonstração do passos necessários para o compreendimento do sistema a ser analisado e consecutivamente a sua partição em busca do aprimoramento da sua performance.

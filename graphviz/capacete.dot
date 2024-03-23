@@ -1,0 +1,72 @@
+digraph {
+    //label="Grafo de Chamada do Wearable";
+    newrank=true;
+
+    {
+        node [style=invis]
+        edge [style=invis]
+        "a1" -> "a2" -> "a3" -> "a4" -> "a5" -> "a6"
+    }
+
+    node[shape="box", style="rounded"]
+       start; end;
+    node[shape="none", style="rounded"]
+        #process;
+        read_sensors; backup; interruption; leds;
+    node[shape="diamond", style=""]
+       while_on; if_warning;
+
+    graph [fontsize=10, fontname="Verdana", compound=true];
+    node [ fontsize=10, fontname="Verdana"];
+
+
+    start -> while_on[constraint=false];
+    while_on -> read_sensors[label="sim"];
+    read_sensors -> {statistic lagrange prime risk};
+    {statistic lagrange prime} -> risk;
+    risk -> if_warning;
+    if_warning -> backup [label="não"];
+    if_warning -> interruption [label="sim"];
+    interruption -> leds;
+    leds -> backup;
+    backup -> while_on;
+    while_on -> end [label="não", constraint=false];
+
+    start [label="Início"];
+    while_on [label="Dispositivo Ligado"];
+    read_sensors [label="Lê Sensores"];
+    //process [label="Process Sensors"];
+    if_warning [label="Existe Perigo?"];
+    backup [label="Back Up"];
+    interruption [label="Interrupção"];
+    leds [label="Leds"];
+    end [label="Fim"];
+
+    subgraph cluster_0 {
+        node [style=filled];
+        read_sensors;
+        statistic [label="Estatística", shape="box", style="dashed"];
+        lagrange [label="Lagrange", shape="box", style="dashed"];
+        prime [label="Primo", shape="box", style="dashed"];
+        label = "Lê Sensores";
+        color="gray";
+    }
+    subgraph cluster_1 {
+        node [style=filled];
+        risk [label="Situação de Risco", shape="box", style="dashed"];
+        label = "Processa Situação";
+        color="gray";
+    }
+
+    //{rank=same; while_on; read_sensors;}
+    //{rank=same; start; end;}
+    //{rank=same; backup; process;}
+    //{rank=same; leds; if_warning;}
+    //{rank=same; if_warning; backup;}
+
+    {rank=same; a1; while_on; }
+    {rank=same; a2; read_sensors; backup; leds}
+    {rank=same; a3; statistic; lagrange; prime; interruption}
+    {rank=same; a4; risk; if_warning}
+    {rank=same; a5;  }
+}
